@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4F0F59C72B36DEC60030E29C /* ListItemModel.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4F0F59C62B36DEC60030E29C /* ListItemModel.mm */; };
+		4F0F59CA2B36E14D0030E29C /* NSDiffableDataSourceSnapshot+sort.m in Sources */ = {isa = PBXBuildFile; fileRef = 4F0F59C82B36E14D0030E29C /* NSDiffableDataSourceSnapshot+sort.m */; };
 		4F8B28262B3541A800087362 /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4F8B28252B3541A800087362 /* AppDelegate.mm */; };
 		4F8B28292B3541A800087362 /* SceneDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4F8B28282B3541A800087362 /* SceneDelegate.mm */; };
 		4F8B28312B3541A900087362 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4F8B28302B3541A900087362 /* Assets.xcassets */; };
@@ -18,6 +20,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		4F0F59C52B36DEC60030E29C /* ListItemModel.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ListItemModel.hpp; sourceTree = "<group>"; };
+		4F0F59C62B36DEC60030E29C /* ListItemModel.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ListItemModel.mm; sourceTree = "<group>"; };
+		4F0F59C82B36E14D0030E29C /* NSDiffableDataSourceSnapshot+sort.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSDiffableDataSourceSnapshot+sort.m"; sourceTree = "<group>"; };
+		4F0F59C92B36E14D0030E29C /* NSDiffableDataSourceSnapshot+sort.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSDiffableDataSourceSnapshot+sort.h"; sourceTree = "<group>"; };
 		4F8B28212B3541A800087362 /* CustomListLayout-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "CustomListLayout-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4F8B28242B3541A800087362 /* AppDelegate.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = AppDelegate.hpp; sourceTree = "<group>"; };
 		4F8B28252B3541A800087362 /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
@@ -70,6 +76,8 @@
 				4F8B28252B3541A800087362 /* AppDelegate.mm */,
 				4F8B28272B3541A800087362 /* SceneDelegate.hpp */,
 				4F8B28282B3541A800087362 /* SceneDelegate.mm */,
+				4F0F59C92B36E14D0030E29C /* NSDiffableDataSourceSnapshot+sort.h */,
+				4F0F59C82B36E14D0030E29C /* NSDiffableDataSourceSnapshot+sort.m */,
 				4F8B283D2B3542C000087362 /* List */,
 				4F8B28302B3541A900087362 /* Assets.xcassets */,
 				4F8B28322B3541A900087362 /* LaunchScreen.storyboard */,
@@ -86,6 +94,8 @@
 				4F8B283F2B3542CB00087362 /* ListViewController.mm */,
 				4F8B285D2B359F6A00087362 /* ListViewModel.hpp */,
 				4F8B285E2B359F6A00087362 /* ListViewModel.mm */,
+				4F0F59C52B36DEC60030E29C /* ListItemModel.hpp */,
+				4F0F59C62B36DEC60030E29C /* ListItemModel.mm */,
 			);
 			path = List;
 			sourceTree = "<group>";
@@ -169,9 +179,11 @@
 			files = (
 				4F8B28402B3542CB00087362 /* ListViewController.mm in Sources */,
 				4F8B28262B3541A800087362 /* AppDelegate.mm in Sources */,
+				4F0F59C72B36DEC60030E29C /* ListItemModel.mm in Sources */,
 				4F8B28372B3541A900087362 /* main.mm in Sources */,
 				4F8B28292B3541A800087362 /* SceneDelegate.mm in Sources */,
 				4F8B285F2B359F6A00087362 /* ListViewModel.mm in Sources */,
+				4F0F59CA2B36E14D0030E29C /* NSDiffableDataSourceSnapshot+sort.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -56,6 +56,13 @@ __attribute__((objc_direct_members))
         [unretained.viewModel shuffleWithCompletionHandler:nil];
     }];
     
+    UIAction *sortAction = [UIAction actionWithTitle:@"Sort"
+                                               image:[UIImage systemImageNamed:@"arrow.clockwise"]
+                                          identifier:nil
+                                             handler:^(__kindof UIAction * _Nonnull action) {
+        [unretained.viewModel sortWithCompletionHandler:nil];
+    }];
+    
     UIAction *decrementAction = [UIAction actionWithTitle:@"Increment"
                                                     image:[UIImage systemImageNamed:@"minus"]
                                                identifier:nil
@@ -70,19 +77,29 @@ __attribute__((objc_direct_members))
         [unretained.viewModel incrementWithCompletionHandler:nil];
     }];
     
-    UIMenu *dataMenu = [UIMenu menuWithTitle:[NSString string]
+    UIMenu *orderMenu = [UIMenu menuWithTitle:@"Order"
+                                        image:nil
+                                   identifier:nil
+                                      options:UIMenuOptionsDisplayInline
+                                     children:@[
+        shuffleAction,
+        sortAction
+    ]];
+    
+    UIMenu *dataMenu = [UIMenu menuWithTitle:@"Data"
                                        image:nil
                                   identifier:nil
                                      options:UIMenuOptionsDisplayInline
                                     children:@[
-        shuffleAction,
         decrementAction,
         incrementAction
     ]];
     
+    orderMenu.preferredElementSize = UIMenuElementSizeMedium;
     dataMenu.preferredElementSize = UIMenuElementSizeMedium;
     
     button.menu = [UIMenu menuWithChildren:@[
+        orderMenu,
         dataMenu
     ]];
     
@@ -119,14 +136,14 @@ __attribute__((objc_direct_members))
     [viewModel release];
 }
 
-- (UICollectionViewDiffableDataSource<NSNumber *, NSString *> *)makeDataSource __attribute__((objc_direct)) {
-    auto cellRegistration = [UICollectionViewCellRegistration registrationWithCellClass:UICollectionViewListCell.class configurationHandler:^(__kindof UICollectionViewListCell * _Nonnull cell, NSIndexPath * _Nonnull indexPath, NSString * _Nonnull item) {
+- (UICollectionViewDiffableDataSource<NSNumber *, ListItemModel *> *)makeDataSource __attribute__((objc_direct)) {
+    auto cellRegistration = [UICollectionViewCellRegistration registrationWithCellClass:UICollectionViewListCell.class configurationHandler:^(__kindof UICollectionViewListCell * _Nonnull cell, NSIndexPath * _Nonnull indexPath, ListItemModel * _Nonnull item) {
         auto contentConfiguration = [cell defaultContentConfiguration];
-        contentConfiguration.text = item;
+        contentConfiguration.text = [NSString stringWithFormat:@"%@ - %@", item.section, item.item];
         cell.contentConfiguration = contentConfiguration;
     }];
     
-    auto dataSource = [[UICollectionViewDiffableDataSource<NSNumber *, NSString *> alloc] initWithCollectionView:self.collectionView cellProvider:^UICollectionViewCell * _Nullable(UICollectionView * _Nonnull collectionView, NSIndexPath * _Nonnull indexPath, id  _Nonnull itemIdentifier) {
+    auto dataSource = [[UICollectionViewDiffableDataSource<NSNumber *, ListItemModel *> alloc] initWithCollectionView:self.collectionView cellProvider:^UICollectionViewCell * _Nullable(UICollectionView * _Nonnull collectionView, NSIndexPath * _Nonnull indexPath, id  _Nonnull itemIdentifier) {
         return [collectionView dequeueConfiguredReusableCellWithRegistration:cellRegistration forIndexPath:indexPath item:itemIdentifier];
     }];
     
