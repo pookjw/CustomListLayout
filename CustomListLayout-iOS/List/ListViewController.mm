@@ -7,6 +7,7 @@
 
 #import "ListViewController.hpp"
 #import "ListViewModel.hpp"
+#import "ListCollectionViewLayout.hpp"
 #import <objc/message.h>
 
 __attribute__((objc_direct_members))
@@ -108,6 +109,7 @@ __attribute__((objc_direct_members))
 }
 
 - (void)dealloc {
+    [_collectionView release];
     [_viewModel release];
     [super dealloc];
 }
@@ -139,7 +141,11 @@ __attribute__((objc_direct_members))
 - (UICollectionViewDiffableDataSource<NSNumber *, ListItemModel *> *)makeDataSource __attribute__((objc_direct)) {
     auto cellRegistration = [UICollectionViewCellRegistration registrationWithCellClass:UICollectionViewListCell.class configurationHandler:^(__kindof UICollectionViewListCell * _Nonnull cell, NSIndexPath * _Nonnull indexPath, ListItemModel * _Nonnull item) {
         auto contentConfiguration = [cell defaultContentConfiguration];
+//        contentConfiguration.text = [NSString stringWithFormat:@"-----\nSection: %@\nItem: %@\n-----", item.section, item.item];
         contentConfiguration.text = [NSString stringWithFormat:@"%@ - %@", item.section, item.item];
+        NSLog(@"%@", contentConfiguration.text);
+        
+        contentConfiguration.textProperties.numberOfLines = 1;
         cell.contentConfiguration = contentConfiguration;
     }];
     
@@ -153,10 +159,9 @@ __attribute__((objc_direct_members))
 - (UICollectionView *)collectionView {
     if (_collectionView) return _collectionView;
     
-    UICollectionLayoutListConfiguration *listConfiguration = [[UICollectionLayoutListConfiguration alloc] initWithAppearance:UICollectionLayoutListAppearancePlain];
-    UICollectionViewCompositionalLayout *collectionViewLayout = [UICollectionViewCompositionalLayout layoutWithListConfiguration:listConfiguration];
-    [listConfiguration release];
+    ListCollectionViewLayout *collectionViewLayout = [ListCollectionViewLayout new];
     UICollectionView *collectionView = [[UICollectionView alloc] initWithFrame:self.view.bounds collectionViewLayout:collectionViewLayout];
+    [collectionViewLayout release];
     
     _collectionView = [collectionView retain];
     

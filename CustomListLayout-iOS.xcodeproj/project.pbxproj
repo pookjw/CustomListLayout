@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		4F0F59C72B36DEC60030E29C /* ListItemModel.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4F0F59C62B36DEC60030E29C /* ListItemModel.mm */; };
 		4F0F59CA2B36E14D0030E29C /* NSDiffableDataSourceSnapshot+sort.m in Sources */ = {isa = PBXBuildFile; fileRef = 4F0F59C82B36E14D0030E29C /* NSDiffableDataSourceSnapshot+sort.m */; };
+		4F4967402B36EECF0047B4C4 /* ListCollectionViewLayout.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4F49673F2B36EECF0047B4C4 /* ListCollectionViewLayout.mm */; };
 		4F8B28262B3541A800087362 /* AppDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4F8B28252B3541A800087362 /* AppDelegate.mm */; };
 		4F8B28292B3541A800087362 /* SceneDelegate.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4F8B28282B3541A800087362 /* SceneDelegate.mm */; };
 		4F8B28312B3541A900087362 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 4F8B28302B3541A900087362 /* Assets.xcassets */; };
@@ -24,6 +25,8 @@
 		4F0F59C62B36DEC60030E29C /* ListItemModel.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ListItemModel.mm; sourceTree = "<group>"; };
 		4F0F59C82B36E14D0030E29C /* NSDiffableDataSourceSnapshot+sort.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSDiffableDataSourceSnapshot+sort.m"; sourceTree = "<group>"; };
 		4F0F59C92B36E14D0030E29C /* NSDiffableDataSourceSnapshot+sort.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSDiffableDataSourceSnapshot+sort.h"; sourceTree = "<group>"; };
+		4F49673E2B36EECF0047B4C4 /* ListCollectionViewLayout.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = ListCollectionViewLayout.hpp; sourceTree = "<group>"; };
+		4F49673F2B36EECF0047B4C4 /* ListCollectionViewLayout.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ListCollectionViewLayout.mm; sourceTree = "<group>"; };
 		4F8B28212B3541A800087362 /* CustomListLayout-iOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "CustomListLayout-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4F8B28242B3541A800087362 /* AppDelegate.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = AppDelegate.hpp; sourceTree = "<group>"; };
 		4F8B28252B3541A800087362 /* AppDelegate.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AppDelegate.mm; sourceTree = "<group>"; };
@@ -96,6 +99,8 @@
 				4F8B285E2B359F6A00087362 /* ListViewModel.mm */,
 				4F0F59C52B36DEC60030E29C /* ListItemModel.hpp */,
 				4F0F59C62B36DEC60030E29C /* ListItemModel.mm */,
+				4F49673E2B36EECF0047B4C4 /* ListCollectionViewLayout.hpp */,
+				4F49673F2B36EECF0047B4C4 /* ListCollectionViewLayout.mm */,
 			);
 			path = List;
 			sourceTree = "<group>";
@@ -183,6 +188,7 @@
 				4F8B28372B3541A900087362 /* main.mm in Sources */,
 				4F8B28292B3541A800087362 /* SceneDelegate.mm in Sources */,
 				4F8B285F2B359F6A00087362 /* ListViewModel.mm in Sources */,
+				4F4967402B36EECF0047B4C4 /* ListCollectionViewLayout.mm in Sources */,
 				4F0F59CA2B36E14D0030E29C /* NSDiffableDataSourceSnapshot+sort.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
