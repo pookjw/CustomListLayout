@@ -151,7 +151,7 @@ __attribute__((objc_direct_members))
 }
 
 - (BOOL)shouldInvalidateLayoutForPreferredLayoutAttributes:(UICollectionViewLayoutAttributes *)preferredAttributes withOriginalAttributes:(UICollectionViewLayoutAttributes *)originalAttributes {
-    BOOL result = !CGSizeEqualToSize(preferredAttributes.frame.size, originalAttributes.frame.size);
+    BOOL result = preferredAttributes.frame.size.height != originalAttributes.frame.size.height;
     
     if (result) {
         [_invalidatedAllAttributes addObject:preferredAttributes];
@@ -160,17 +160,34 @@ __attribute__((objc_direct_members))
     return result;
 }
 
+- (UICollectionViewLayoutInvalidationContext *)invalidationContextForPreferredLayoutAttributes:(UICollectionViewLayoutAttributes *)preferredAttributes withOriginalAttributes:(UICollectionViewLayoutAttributes *)originalAttributes {
+    NSUInteger invalidatedCount = _invalidatedAllAttributes.count;
+    
+    if (invalidatedCount == 0) return nil;
+    
+    UICollectionViewLayoutInvalidationContext *context = [UICollectionViewLayoutInvalidationContext new];
+    
+    auto indexPaths = [[NSMutableArray<NSIndexPath *> alloc] initWithCapacity:invalidatedCount];
+    
+    for (UICollectionViewLayoutAttributes *attributes in _invalidatedAllAttributes) {
+        NSIndexPath *indexPath = attributes.indexPath;
+        [indexPaths addObject:indexPath];
+    }
+    
+    [context invalidateItemsAtIndexPaths:indexPaths];
+    [indexPaths release];
+    
+    return [context autorelease];
+}
+
 - (void)invalidateLayoutWithContext:(UICollectionViewLayoutInvalidationContext *)context {
     NSUInteger invalidatedCount = _invalidatedAllAttributes.count;
     
     if (invalidatedCount) {
-        auto indexPaths = [[NSMutableArray<NSIndexPath *> alloc] initWithCapacity:invalidatedCount];
         NSUInteger count_cachedAllAttributes = _cachedAllAttributes.count;
         
         for (UICollectionViewLayoutAttributes *attributes in _invalidatedAllAttributes) {
             NSIndexPath *indexPath = attributes.indexPath;
-            
-            [indexPaths addObject:indexPath];
             
             //
             
@@ -200,9 +217,9 @@ __attribute__((objc_direct_members))
         }
         
         [_invalidatedAllAttributes removeAllObjects];
-        [context invalidateItemsAtIndexPaths:indexPaths];
-        [indexPaths release];
     }
+    
+    [super invalidateLayoutWithContext:context];
 }
 
 @end
