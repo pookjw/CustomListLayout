@@ -10,6 +10,8 @@
 #import "ListCollectionViewLayout.hpp"
 #import <objc/message.h>
 
+#define USE_CUSTOM_LAYOUT 1
+
 __attribute__((objc_direct_members))
 @interface ListViewController ()
 @property (retain, readonly, nonatomic) UICollectionView *collectionView;
@@ -42,11 +44,7 @@ __attribute__((objc_direct_members))
     
     reinterpret_cast<void (*)(id, SEL, long)>(objc_msgSend)(navigationItem, sel_registerName("_setLargeTitleTwoLineMode:"), 1);
     
-    UIButtonConfiguration *buttonConfiguration = [UIButtonConfiguration tintedButtonConfiguration];
-    buttonConfiguration.image = [UIImage systemImageNamed:@"line.3.horizontal"];
-    
-    UIButton *button = [UIButton buttonWithType:UIButtonTypeCustom];
-    button.showsMenuAsPrimaryAction = YES;
+    //
     
     __block auto unretained = self;
     
@@ -111,14 +109,38 @@ __attribute__((objc_direct_members))
         completion(@[action]);
     }];
     
-    button.menu = [UIMenu menuWithChildren:@[
+    UIAction *reloadAction = [UIAction actionWithTitle:@"Reload"
+                                                 image:[UIImage systemImageNamed:@"arrow.counterclockwise"]
+                                            identifier:nil 
+                                               handler:^(__kindof UIAction * _Nonnull action) {
+        [unretained.viewModel reloadWithCompletionHandler:nil];
+    }];
+    
+    UIMenu *menu = [UIMenu menuWithChildren:@[
         orderMenu,
         dataMenu,
-        scrollToRandomItemAction
+        scrollToRandomItemAction,
+        reloadAction
     ]];
     
-    button.configuration = buttonConfiguration;
-    reinterpret_cast<void (*)(id, SEL, id)>(objc_msgSend)(navigationItem, sel_registerName("_setLargeTitleAccessoryView:"), button);
+    //
+    
+    UIButtonConfiguration *buttonConfiguration = [UIButtonConfiguration tintedButtonConfiguration];
+    buttonConfiguration.image = [UIImage systemImageNamed:@"line.3.horizontal"];
+    
+    UIButton *accessoryButton = [UIButton buttonWithType:UIButtonTypeCustom];
+    accessoryButton.showsMenuAsPrimaryAction = YES;
+    accessoryButton.configuration = buttonConfiguration;
+    accessoryButton.menu = menu;
+    
+    reinterpret_cast<void (*)(id, SEL, id)>(objc_msgSend)(navigationItem, sel_registerName("_setLargeTitleAccessoryView:"), accessoryButton);
+    
+    //
+    
+    UIBarButtonItem *barButtonItem = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"line.3.horizontal"]
+                                                                       menu:menu];
+    navigationItem.rightBarButtonItem = barButtonItem;
+    [barButtonItem release];
 }
 
 - (void)dealloc {
@@ -155,7 +177,11 @@ __attribute__((objc_direct_members))
     auto cellRegistration = [UICollectionViewCellRegistration registrationWithCellClass:UICollectionViewListCell.class configurationHandler:^(__kindof UICollectionViewListCell * _Nonnull cell, NSIndexPath * _Nonnull indexPath, ListItemModel * _Nonnull item) {
         auto contentConfiguration = [cell defaultContentConfiguration];
         contentConfiguration.text = [NSString stringWithFormat:@"-----\nSection: %@\nItem: %@\n-----", item.section, item.item];
-//        contentConfiguration.text = [NSString stringWithFormat:@"%@ - %@", item.section, item.item];
+        
+        if (indexPath.item % 2) {
+            contentConfiguration.text = [contentConfiguration.text stringByAppendingString:@"\nOdd\n-----"];
+        }
+        //        contentConfiguration.text = [NSString stringWithFormat:@"%@ - %@", item.section, item.item];
         
         contentConfiguration.textProperties.numberOfLines = 0;
         cell.contentConfiguration = contentConfiguration;
@@ -171,12 +197,16 @@ __attribute__((objc_direct_members))
 - (UICollectionView *)collectionView {
     if (_collectionView) return _collectionView;
     
+#if USE_CUSTOM_LAYOUT
     ListCollectionViewLayout *collectionViewLayout = [ListCollectionViewLayout new];
-//    UICollectionLayoutListConfiguration *listConfiguration = [[UICollectionLayoutListConfiguration alloc] initWithAppearance:UICollectionLayoutListAppearancePlain];
-//        UICollectionViewCompositionalLayout *collectionViewLayout = [UICollectionViewCompositionalLayout layoutWithListConfiguration:listConfiguration];
-//        [listConfiguration release];
     UICollectionView *collectionView = [[UICollectionView alloc] initWithFrame:self.view.bounds collectionViewLayout:collectionViewLayout];
     [collectionViewLayout release];
+#else
+    UICollectionLayoutListConfiguration *listConfiguration = [[UICollectionLayoutListConfiguration alloc] initWithAppearance:UICollectionLayoutListAppearancePlain];
+    UICollectionViewCompositionalLayout *collectionViewLayout = [UICollectionViewCompositionalLayout layoutWithListConfiguration:listConfiguration];
+    [listConfiguration release];
+    UICollectionView *collectionView = [[UICollectionView alloc] initWithFrame:self.view.bounds collectionViewLayout:collectionViewLayout];
+#endif
     
     _collectionView = [collectionView retain];
     

@@ -225,4 +225,21 @@ __attribute__((objc_direct_members))
     });
 }
 
+- (void)reloadWithCompletionHandler:(void (^)())completionHandler {
+    auto dataSource = _dataSource;
+    
+    dispatch_async(_queue, ^{
+        auto snapshot = reinterpret_cast<NSDiffableDataSourceSnapshot<NSNumber *, ListItemModel *> *>([dataSource.snapshot copy]);
+        
+        if (snapshot.numberOfSections == 0) {
+            [snapshot release];
+            return;
+        }
+        
+        [snapshot reloadSectionsWithIdentifiers:snapshot.sectionIdentifiers];
+        [dataSource applySnapshot:snapshot animatingDifferences:YES completion:completionHandler];
+        [snapshot release];
+    });
+}
+
 @end

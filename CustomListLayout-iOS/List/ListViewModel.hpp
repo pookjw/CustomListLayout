@@ -21,6 +21,7 @@ __attribute__((objc_direct_members))
 - (void)sortWithCompletionHandler:(void (^ _Nullable)())completionHandler;
 - (void)incrementWithCompletionHandler:(void (^ _Nullable)())completionHandler;
 - (void)decrementWithCompletionHandler:(void (^ _Nullable)())completionHandler;
+- (void)reloadWithCompletionHandler:(void (^ _Nullable)())completionHandler;
 @end
 
 NS_ASSUME_NONNULL_END
