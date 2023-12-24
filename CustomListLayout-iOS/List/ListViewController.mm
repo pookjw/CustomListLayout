@@ -99,9 +99,22 @@ __attribute__((objc_direct_members))
     orderMenu.preferredElementSize = UIMenuElementSizeMedium;
     dataMenu.preferredElementSize = UIMenuElementSizeMedium;
     
+    UIDeferredMenuElement *scrollToRandomItemAction = [UIDeferredMenuElement elementWithUncachedProvider:^(void (^ _Nonnull completion)(NSArray<UIMenuElement *> * _Nonnull)) {
+        // TODO: Display random index path
+        UIAction *action = [UIAction actionWithTitle:[NSString stringWithFormat:@"%@", [NSDate now]]
+                                               image:[UIImage systemImageNamed:@"arrow.up.arrow.down"]
+                                          identifier:nil
+                                             handler:^(__kindof UIAction * _Nonnull action) {
+            
+        }];
+        
+        completion(@[action]);
+    }];
+    
     button.menu = [UIMenu menuWithChildren:@[
         orderMenu,
-        dataMenu
+        dataMenu,
+        scrollToRandomItemAction
     ]];
     
     button.configuration = buttonConfiguration;
@@ -141,11 +154,10 @@ __attribute__((objc_direct_members))
 - (UICollectionViewDiffableDataSource<NSNumber *, ListItemModel *> *)makeDataSource __attribute__((objc_direct)) {
     auto cellRegistration = [UICollectionViewCellRegistration registrationWithCellClass:UICollectionViewListCell.class configurationHandler:^(__kindof UICollectionViewListCell * _Nonnull cell, NSIndexPath * _Nonnull indexPath, ListItemModel * _Nonnull item) {
         auto contentConfiguration = [cell defaultContentConfiguration];
-//        contentConfiguration.text = [NSString stringWithFormat:@"-----\nSection: %@\nItem: %@\n-----", item.section, item.item];
-        contentConfiguration.text = [NSString stringWithFormat:@"%@ - %@", item.section, item.item];
-        NSLog(@"%@", contentConfiguration.text);
+        contentConfiguration.text = [NSString stringWithFormat:@"-----\nSection: %@\nItem: %@\n-----", item.section, item.item];
+//        contentConfiguration.text = [NSString stringWithFormat:@"%@ - %@", item.section, item.item];
         
-        contentConfiguration.textProperties.numberOfLines = 1;
+        contentConfiguration.textProperties.numberOfLines = 0;
         cell.contentConfiguration = contentConfiguration;
     }];
     
@@ -160,6 +172,9 @@ __attribute__((objc_direct_members))
     if (_collectionView) return _collectionView;
     
     ListCollectionViewLayout *collectionViewLayout = [ListCollectionViewLayout new];
+//    UICollectionLayoutListConfiguration *listConfiguration = [[UICollectionLayoutListConfiguration alloc] initWithAppearance:UICollectionLayoutListAppearancePlain];
+//        UICollectionViewCompositionalLayout *collectionViewLayout = [UICollectionViewCompositionalLayout layoutWithListConfiguration:listConfiguration];
+//        [listConfiguration release];
     UICollectionView *collectionView = [[UICollectionView alloc] initWithFrame:self.view.bounds collectionViewLayout:collectionViewLayout];
     [collectionViewLayout release];
     
