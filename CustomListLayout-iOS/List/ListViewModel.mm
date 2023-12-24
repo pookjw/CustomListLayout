@@ -80,15 +80,15 @@ __attribute__((objc_direct_members))
         [sectionIdentifiers enumerateObjectsUsingBlock:^(NSNumber * _Nonnull section, NSUInteger idx, BOOL * _Nonnull stop) {
             auto sectionIdentifiers = snapshot.sectionIdentifiers;
             
-            BOOL sectionBefore = bool_dist(gen);
-            NSNumber *randomSection = sectionIdentifiers[numberOfSections_dist(gen)];
-            while ([section isEqualToNumber:randomSection]) randomSection = sectionIdentifiers[numberOfSections_dist(gen)];
-            
-            if (sectionBefore) {
-                [snapshot moveSectionWithIdentifier:section beforeSectionWithIdentifier:randomSection];
-            } else {
-                [snapshot moveSectionWithIdentifier:section afterSectionWithIdentifier:randomSection];
-            }
+//            BOOL sectionBefore = bool_dist(gen);
+//            NSNumber *randomSection = sectionIdentifiers[numberOfSections_dist(gen)];
+//            while ([section isEqualToNumber:randomSection]) randomSection = sectionIdentifiers[numberOfSections_dist(gen)];
+//            
+//            if (sectionBefore) {
+//                [snapshot moveSectionWithIdentifier:section beforeSectionWithIdentifier:randomSection];
+//            } else {
+//                [snapshot moveSectionWithIdentifier:section afterSectionWithIdentifier:randomSection];
+//            }
             
             auto itemIdentifiers = [snapshot itemIdentifiersInSectionWithIdentifier:section];
             NSUInteger numberOfItems = itemIdentifiers.count;
