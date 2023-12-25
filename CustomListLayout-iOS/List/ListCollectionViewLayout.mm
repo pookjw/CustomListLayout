@@ -89,6 +89,7 @@ __attribute__((objc_direct_members))
                 [self deleteCachedAttributesForIndexPath:item.indexPathBeforeUpdate];
                 break;
             case UICollectionUpdateActionReload:
+                [self reloadCachedAttributesForIndexPath:item.indexPathBeforeUpdate];
                 break;
             case UICollectionUpdateActionMove:
                 [self moveCachedAttributesFromIndexPath:item.indexPathBeforeUpdate toIndexPath:item.indexPathAfterUpdate];
@@ -97,6 +98,9 @@ __attribute__((objc_direct_members))
                 break;
         }
     }];
+    
+    NSLog(@"%@", updateItems);
+    NSLog(@"%@", _cachedAllAttributes);
     
     [super prepareForCollectionViewUpdates:updateItems];
 }
@@ -112,7 +116,44 @@ __attribute__((objc_direct_members))
 }
 
 - (NSArray<__kindof UICollectionViewLayoutAttributes *> *)layoutAttributesForElementsInRect:(CGRect)rect {
-    return _cachedAllAttributes;
+    NSUInteger count = _cachedAllAttributes.count;
+    
+    if (count == 0) {
+        return nil;
+    }
+    
+    NSInteger firstMatchIndex = [self binSearchWithRect:rect startIndex:0 endIndex:count - 1];
+    if (firstMatchIndex == NSNotFound) {
+        return nil;
+    }
+    
+    //
+    
+    auto results = [NSMutableArray<UICollectionViewLayoutAttributes *> new];
+    
+    [[_cachedAllAttributes objectsAtIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, firstMatchIndex)]] enumerateObjectsWithOptions:NSEnumerationReverse usingBlock:^(UICollectionViewLayoutAttributes * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        if (CGRectGetMaxY(obj.frame) < CGRectGetMinY(rect)) {
+            *stop = YES;
+            return;
+        }
+        
+        [results addObject:obj];
+    }];
+    
+    [[_cachedAllAttributes objectsAtIndexes:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstMatchIndex, count - firstMatchIndex)]] enumerateObjectsUsingBlock:^(UICollectionViewLayoutAttributes * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        if (CGRectGetMinY(obj.frame) > CGRectGetMaxY(rect)) {
+            *stop = YES;
+            return;
+        }
+        
+        [results addObject:obj];
+    }];
+    
+    //
+    
+    auto copy = static_cast<NSArray<UICollectionViewLayoutAttributes *> *>([results copy]);
+    [results release];
+    return [copy autorelease];
 }
 
 - (UICollectionViewLayoutAttributes *)initialLayoutAttributesForAppearingItemAtIndexPath:(NSIndexPath *)itemIndexPath {
@@ -127,6 +168,10 @@ __attribute__((objc_direct_members))
     }
     
     return result;
+}
+
+- (BOOL)shouldInvalidateLayoutForBoundsChange:(CGRect)newBounds {
+    return !CGRectEqualToRect(self.collectionView.bounds, newBounds);
 }
 
 - (UICollectionViewLayoutInvalidationContext *)invalidationContextForPreferredLayoutAttributes:(UICollectionViewLayoutAttributes *)preferredAttributes withOriginalAttributes:(UICollectionViewLayoutAttributes *)originalAttributes {
@@ -324,11 +369,131 @@ __attribute__((objc_direct_members))
 }
 
 - (void)reloadCachedAttributesForIndexPath:(NSIndexPath *)indexPath __attribute__((objc_direct)) {
+//    [self deleteCachedAttributesForIndexPath:indexPath];
+//    [self insertCachedAttributesForIndexPath:indexPath];
     
+    if (indexPath.item == NSNotFound) {
+        NSInteger section = indexPath.section;
+        NSInteger numberOfItems = [self.collectionView numberOfItemsInSection:section];
+        
+        std::vector<NSInteger> itemIndexes(numberOfItems);
+        std::iota(itemIndexes.begin(), itemIndexes.end(), 0);
+        
+        std::for_each(itemIndexes.cbegin(),
+                      itemIndexes.cend(),
+                      [self, section](NSInteger item) {
+            NSIndexPath *indexPath = [NSIndexPath indexPathForItem:item inSection:section];
+            [self _reloadCachedAttributesForIndexPath:indexPath];
+        });
+    } else {
+        [self _reloadCachedAttributesForIndexPath:indexPath];
+    }
 }
+
+- (void)_reloadCachedAttributesForIndexPath:(NSIndexPath *)indexPath __attribute__((objc_direct)) {
+    __block NSInteger index = NSNotFound;
+    __block UICollectionViewLayoutAttributes *attributes = nil;
+    
+    [_cachedAllAttributes enumerateObjectsUsingBlock:^(UICollectionViewLayoutAttributes * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        if ([obj.indexPath isEqual:indexPath]) {
+            attributes = obj;
+            index = idx;
+            *stop = YES;
+        }
+    }];
+    
+    assert(index != NSNotFound);
+    
+    CGFloat heightDiff = kListCollectionViewLayoutEstimantedHeight - attributes.frame.size.height;
+    attributes.frame = CGRectMake(attributes.frame.origin.x,
+                                  attributes.frame.origin.y,
+                                  attributes.frame.size.width,
+                                  kListCollectionViewLayoutEstimantedHeight);
+    
+    _collectionViewContentSize = CGSizeMake(_collectionViewContentSize.width,
+                                            _collectionViewContentSize.height + heightDiff);
+    
+    if (index < _cachedAllAttributes.count - 1) {
+        NSIndexSet *indexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(index + 1, _cachedAllAttributes.count - index - 1)];
+        [[_cachedAllAttributes objectsAtIndexes:indexes] enumerateObjectsUsingBlock:^(UICollectionViewLayoutAttributes * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            obj.frame = CGRectMake(obj.frame.origin.x,
+                                   obj.frame.origin.y + heightDiff,
+                                   obj.frame.size.width,
+                                   obj.frame.size.height);
+        }];
+    }
+}
+
 
 - (void)moveCachedAttributesFromIndexPath:(NSIndexPath *)fromIndexPath toIndexPath:(NSIndexPath *)toIndexPath __attribute__((objc_direct)) {
     if (fromIndexPath.item == NSNotFound && toIndexPath.item == NSNotFound) {
+        __block NSInteger firstFromSectionIndex = NSNotFound;
+        __block CGFloat fromTotalHeight = 0.f;
+        __block NSInteger firstToSectionIndex = NSNotFound;
+        
+        [_cachedAllAttributes enumerateObjectsUsingBlock:^(UICollectionViewLayoutAttributes * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            NSIndexPath *indexPath = obj.indexPath;
+            
+            if (indexPath.section == fromIndexPath.section) {
+                if (indexPath.item == 0) {
+                    firstToSectionIndex = idx;
+                } 
+                
+                fromTotalHeight += obj.frame.size.height;
+            }
+            
+            if (indexPath.section == toIndexPath.section && indexPath.item == 0) {
+                firstToSectionIndex = idx;
+            }
+            
+            if (firstToSectionIndex != NSNotFound && firstToSectionIndex != NSNotFound) {
+                *stop = YES;
+            }
+        }];
+        
+        assert(firstFromSectionIndex != NSNotFound);
+        assert(firstToSectionIndex != NSNotFound);
+        
+        //
+        
+        if (firstFromSectionIndex < firstToSectionIndex) {
+            // Data Source에는 이미 Move가 반영되었기 때문에 To에서 가져온다.
+            NSUInteger numberIfItemsInFromSection = [self.collectionView numberOfItemsInSection:toIndexPath.section];
+            NSUInteger numberIfItemsInToSection = [self.collectionView numberOfItemsInSection:toIndexPath.section - 1];
+            
+//            CGRect toLastFrame = _cachedAllAttributes[firstToSectionIndex + numberIfItemsInToSection - 1].frame;
+            
+            NSIndexSet *indexes_1 = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstFromSectionIndex + numberIfItemsInFromSection, firstToSectionIndex - (firstFromSectionIndex + numberIfItemsInFromSection))];
+            
+            [[_cachedAllAttributes objectsAtIndexes:indexes_1] enumerateObjectsUsingBlock:^(UICollectionViewLayoutAttributes * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                obj.frame = CGRectMake(obj.frame.origin.x,
+                                       obj.frame.origin.y - fromTotalHeight,
+                                       obj.frame.size.width,
+                                       obj.frame.size.height);
+                
+                obj.indexPath = [NSIndexPath indexPathForItem:obj.indexPath.item inSection:obj.indexPath.section - 1];
+            }];
+            
+            CGRect toLastFrame = _cachedAllAttributes[firstToSectionIndex + numberIfItemsInToSection - 1].frame;
+            __block CGFloat offsetY = CGRectGetMaxY(toLastFrame); 
+            
+            NSIndexSet *indexes_2 = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(firstFromSectionIndex, numberIfItemsInFromSection)];
+            NSArray<UICollectionViewLayoutAttributes *> *fromAttributes = [_cachedAllAttributes objectsAtIndexes:indexes_2];
+            [fromAttributes enumerateObjectsUsingBlock:^(UICollectionViewLayoutAttributes * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+                obj.frame = CGRectMake(obj.frame.origin.x,
+                                       offsetY,
+                                       obj.frame.size.width,
+                                       obj.frame.size.height);
+                
+                offsetY += obj.frame.size.height;
+            }];
+            
+            [_cachedAllAttributes removeObjectsAtIndexes:indexes_2];
+            [_cachedAllAttributes insertObjects:fromAttributes atIndexes:[NSIndexSet indexSetWithIndex:firstToSectionIndex - numberIfItemsInFromSection]];
+            
+        } else {
+            
+        }
         
         return;
     } else {
@@ -382,9 +547,9 @@ __attribute__((objc_direct_members))
         }];
         
         _cachedAllAttributes[fromIndex].frame = CGRectMake(_cachedAllAttributes[fromIndex].frame.origin.x,
-                                                                         _cachedAllAttributes[fromIndex].frame.origin.y - fromAttributes.frame.size.height,
-                                                                         _cachedAllAttributes[fromIndex].frame.size.width,
-                                                                         _cachedAllAttributes[fromIndex].frame.size.height);
+                                                           _cachedAllAttributes[fromIndex].frame.origin.y - fromAttributes.frame.size.height,
+                                                           _cachedAllAttributes[fromIndex].frame.size.width,
+                                                           _cachedAllAttributes[fromIndex].frame.size.height);
     } else {
         NSIndexSet *indexes = [NSIndexSet indexSetWithIndexesInRange:NSMakeRange(toIndex + 1, fromIndex - toIndex - 1)];
         [[_cachedAllAttributes objectsAtIndexes:indexes] enumerateObjectsWithOptions:0 usingBlock:^(UICollectionViewLayoutAttributes * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
@@ -397,9 +562,9 @@ __attribute__((objc_direct_members))
         }];
         
         _cachedAllAttributes[fromIndex].frame = CGRectMake(_cachedAllAttributes[fromIndex].frame.origin.x,
-                                                                         _cachedAllAttributes[fromIndex].frame.origin.y + fromAttributes.frame.size.height,
-                                                                         _cachedAllAttributes[fromIndex].frame.size.width,
-                                                                         _cachedAllAttributes[fromIndex].frame.size.height);
+                                                           _cachedAllAttributes[fromIndex].frame.origin.y + fromAttributes.frame.size.height,
+                                                           _cachedAllAttributes[fromIndex].frame.size.width,
+                                                           _cachedAllAttributes[fromIndex].frame.size.height);
     }
     
     _cachedAllAttributes[fromIndex].indexPath = fromAttributes.indexPath;
@@ -415,6 +580,23 @@ __attribute__((objc_direct_members))
                                           CGRectGetMaxY(_cachedAllAttributes[toIndex - 1].frame),
                                           fromAttributes.frame.size.width,
                                           fromAttributes.frame.size.height);
+    }
+}
+
+- (NSInteger)binSearchWithRect:(CGRect)rect startIndex:(NSInteger)startIndex endIndex:(NSInteger)endIndex __attribute__((objc_direct)) {
+    if (endIndex < startIndex) return NSNotFound;
+    
+    NSInteger midIndex = (startIndex + endIndex) / 2;
+    UICollectionViewLayoutAttributes *attributes = _cachedAllAttributes[midIndex];
+    
+    if (CGRectIntersectsRect(attributes.frame, rect)) {
+        return midIndex;
+    } else {
+        if (CGRectGetMaxY(attributes.frame) < CGRectGetMinY(rect)) {
+            return [self binSearchWithRect:rect startIndex:midIndex + 1 endIndex:endIndex];
+        } else {
+            return [self binSearchWithRect:rect startIndex:startIndex endIndex:midIndex - 1];
+        }
     }
 }
 
