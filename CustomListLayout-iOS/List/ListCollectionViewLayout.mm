@@ -9,6 +9,27 @@
 #import <numeric>
 #import <algorithm>
 
+/*
+ diff는 중간 반영된 값이 아님
+ 따라서 cachedAllAttributes를 Section: Array 기반으로 바꿔줘야 해결됨
+ (
+     "MOV(1-0)->(4-0)",
+     "MOV(1-1)->(4-1)",
+     "MOV(1-2)->(4-2)",
+     "MOV(1-3)->(4-3)",
+     "MOV(1-4)->(4-4)",
+     "MOV(1-5)->(4-5)",
+     "SEC:MOV(1)->(4)",
+     "MOV(4-0)->(0-0)",
+     "MOV(4-1)->(0-1)",
+     "MOV(4-2)->(0-2)",
+     "SEC:MOV(4)->(0)",
+     "MOV(5-0)->(2-0)",
+     "MOV(5-1)->(2-1)",
+     "MOV(5-2)->(2-2)",
+     "SEC:MOV(5)->(2)"
+ )
+ */
 #define kListCollectionViewLayoutEstimantedHeight 44.f
 
 __attribute__((objc_direct_members))
