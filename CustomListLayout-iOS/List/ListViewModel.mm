@@ -44,11 +44,11 @@ __attribute__((objc_direct_members))
         [snapshot appendSectionsWithIdentifiers:sections];
         
         [sections enumerateObjectsUsingBlock:^(NSNumber * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-            ListItemModel *items[15];
-            for (NSUInteger i = 0; i < 15; i++) {
+            ListItemModel *items[3];
+            for (NSUInteger i = 0; i < 3; i++) {
                 items[i] = [[[ListItemModel alloc] initWithSection:obj item:@(i)] autorelease];
             }
-            NSArray<ListItemModel *> *itemsArray = [NSArray<ListItemModel *> arrayWithObjects:items count:15];
+            NSArray<ListItemModel *> *itemsArray = [NSArray<ListItemModel *> arrayWithObjects:items count:3];
             
             [snapshot appendItemsWithIdentifiers:itemsArray intoSectionWithIdentifier:obj];
         }];
@@ -158,7 +158,7 @@ __attribute__((objc_direct_members))
             NSUInteger count = [snapshot numberOfItemsInSection:section];
             
             auto newItems = [NSMutableArray<ListItemModel *> new];
-            for (NSUInteger i = count; i < count + 15; i++) {
+            for (NSUInteger i = count; i < count + 3; i++) {
                 ListItemModel *itemModel = [[ListItemModel alloc] initWithSection:section item:@(i)];
                 [newItems addObject:itemModel];
                 [itemModel release];
@@ -192,7 +192,7 @@ __attribute__((objc_direct_members))
             auto items = [snapshot itemIdentifiersInSectionWithIdentifier:section];
             NSUInteger lastIndex = items.count - 1;
             
-            for (NSUInteger i = 0; i < 15; i++) {
+            for (NSUInteger i = 0; i < 3; i++) {
                 NSUInteger target = (lastIndex - i);
                 NSNumber *targetNumbder = @(target);
                 
