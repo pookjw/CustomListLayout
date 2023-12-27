@@ -150,13 +150,22 @@ __attribute__((objc_direct_members))
         obj.beforeIndexPath = obj.indexPath;
     }];
     
-//    NSLog(@"%@", updateItems);
+    auto refinedUpdateItems = [NSMutableArray<UICollectionViewUpdateItem *> new];
+    auto deletedIndexes = [NSIndexSet new];
     
-    NSUInteger count = updateItems.count;
-    auto movedSectionItems = [NSMutableArray<UICollectionViewUpdateItem *> new];
+    [updateItems enumerateObjectsUsingBlock:^(UICollectionViewUpdateItem * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        if
+    }];
+    
+    // TODO: PHChange order, filter duplicated delete/insert
+    auto sortedUpdateItems = [updateItems sortedArrayUsingComparator:^NSComparisonResult(UICollectionViewUpdateItem * _Nonnull obj1, UICollectionViewUpdateItem * _Nonnull obj2) {
+        if (obj1.updateAction == obj2.updateAction) {
+            return NSOrderedSame;
+        } else i
+    }];
     
     [updateItems enumerateObjectsUsingBlock:^(UICollectionViewUpdateItem * _Nonnull item, NSUInteger idx, BOOL * _Nonnull stop) {
-//        NSLog(@"%@", item);
+        NSLog(@"%@", item);
         
         switch (item.updateAction) {
             case UICollectionUpdateActionInsert:
@@ -164,42 +173,19 @@ __attribute__((objc_direct_members))
                 break;
             case UICollectionUpdateActionDelete:
                 [self deleteCachedAttributesForIndexPath:item.indexPathBeforeUpdate];
-                
-                if (idx + 1 < count) {
-                    if (updateItems[idx +1].updateAction != UICollectionUpdateActionDelete) {
-                        [self finalizeDeletingCachedAttributes];
-                    }
-                } else {
-                    [self finalizeDeletingCachedAttributes];
-                }
                 break;
             case UICollectionUpdateActionReload:
                 [self reloadCachedAttributesForIndexPath:item.indexPathBeforeUpdate];
                 break;
             case UICollectionUpdateActionMove:
-                if (item.indexPathAfterUpdate.item == NSNotFound) {
-//                    [self moveCachedAttributesFromIndexPath:item.indexPathBeforeUpdate toIndexPath:item.indexPathAfterUpdate];
-                    [movedSectionItems addObject:item];
-                } else {
-                    NSIndexPath *fromIndexPath = item.indexPathBeforeUpdate;
-                    NSIndexPath *toIndexPath = [NSIndexPath indexPathForItem:item.indexPathAfterUpdate.item inSection:fromIndexPath.section];
-                    
-                    if ([fromIndexPath isEqual:toIndexPath]) return;
-                    [self moveCachedAttributesFromIndexPath:fromIndexPath toIndexPath:toIndexPath];
-                }
+                [self moveCachedAttributesFromIndexPath:item.indexPathBeforeUpdate toIndexPath:item.indexPathAfterUpdate];
                 break;
             default:
                 break;
         }
         
-//        NSLog(@"%@", _cachedAllAttributes);
+        NSLog(@"%@", _cachedAllAttributes);
     }];
-    
-    [movedSectionItems enumerateObjectsUsingBlock:^(UICollectionViewUpdateItem * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        [self moveCachedAttributesFromIndexPath:obj.indexPathBeforeUpdate toIndexPath:obj.indexPathAfterUpdate];
-    }];
-    
-    [movedSectionItems release];
     
     NSLog(@"%@", self.sortedCachedAllAttributes);
     
@@ -344,9 +330,7 @@ __attribute__((objc_direct_members))
         //
         
         [_cachedAllAttributes enumerateObjectsUsingBlock:^(_ListCollectionViewLayoutAttributes * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-            if (obj.beforeIndexPath == nil) return;
-            
-            if (indexPath.section <= obj.beforeIndexPath.section) {
+            if (indexPath.section <= obj.indexPath.section) {
                 obj.indexPath = [NSIndexPath indexPathForItem:obj.indexPath.item inSection:obj.indexPath.section + 1];
             }
         }];
@@ -373,9 +357,7 @@ __attribute__((objc_direct_members))
 
 - (void)_insertCachedAttributesForIndexPath:(NSIndexPath *)indexPath __attribute__((objc_direct)) {
     [_cachedAllAttributes enumerateObjectsUsingBlock:^(_ListCollectionViewLayoutAttributes * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        if (obj.beforeIndexPath == nil) return;
-        
-        if (indexPath.section == obj.beforeIndexPath.section && indexPath.item <= obj.beforeIndexPath.item) {
+        if (indexPath.section == obj.indexPath.section && indexPath.item <= obj.indexPath.item) {
             obj.indexPath = [NSIndexPath indexPathForItem:obj.indexPath.item + 1 inSection:indexPath.section];
         }
     }];
@@ -417,20 +399,6 @@ __attribute__((objc_direct_members))
         
         [_cachedAllAttributes removeObjectAtIndex:index];
     }
-}
-
-- (void)finalizeDeletingCachedAttributes __attribute__((objc_direct)) {
-    __block NSIndexPath *lastIndexPath = nil;
-    
-    [_cachedAllAttributes enumerateObjectsUsingBlock:^(_ListCollectionViewLayoutAttributes * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        if (lastIndexPath) {
-            if (lastIndexPath.section == obj.indexPath.section && lastIndexPath.item + 1 < obj.indexPath.item) {
-                obj.indexPath = [NSIndexPath indexPathForItem:lastIndexPath.item + 1 inSection:lastIndexPath.section];
-            }
-        }
-        
-        lastIndexPath = obj.indexPath;
-    }];
 }
 
 - (void)reloadCachedAttributesForIndexPath:(NSIndexPath *)indexPath __attribute__((objc_direct)) {
@@ -475,14 +443,42 @@ __attribute__((objc_direct_members))
 
 - (void)moveCachedAttributesFromIndexPath:(NSIndexPath *)fromIndexPath toIndexPath:(NSIndexPath *)toIndexPath __attribute__((objc_direct)) {
     if (toIndexPath.item == NSNotFound) {
-        
+        [_cachedAllAttributes enumerateObjectsUsingBlock:^(_ListCollectionViewLayoutAttributes * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            if (obj.beforeIndexPath == nil) return;
+            
+            if (obj.beforeIndexPath.section == fromIndexPath.section) {
+                obj.indexPath = [NSIndexPath indexPathForItem:obj.indexPath.item inSection:toIndexPath.section];
+            } else {
+                if (fromIndexPath.section < toIndexPath.section) {
+                    if (fromIndexPath.section < obj.indexPath.section && obj.indexPath.section <= toIndexPath.section) {
+                        obj.indexPath = [NSIndexPath indexPathForItem:obj.indexPath.item inSection:obj.indexPath.section - 1];
+                    }
+                } else {
+                    if (toIndexPath.section <= obj.indexPath.section && obj.indexPath.section < fromIndexPath.section) {
+                        obj.indexPath = [NSIndexPath indexPathForItem:obj.indexPath.item inSection:obj.indexPath.section + 1];
+                    }
+                }
+            }
+        }];
     } else {
-        [self _moveCachedAttributesFromIndexPath:fromIndexPath toIndexPath:toIndexPath];
+        [_cachedAllAttributes enumerateObjectsUsingBlock:^(_ListCollectionViewLayoutAttributes * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+            if (obj.beforeIndexPath == nil) return;
+            
+            if ([obj.beforeIndexPath isEqual:fromIndexPath]) {
+                obj.indexPath = toIndexPath;
+            } else if (fromIndexPath.section == obj.beforeIndexPath.section) {
+                if (fromIndexPath.item < toIndexPath.item) {
+                    if (fromIndexPath.item < obj.indexPath.item && obj.indexPath.item <= toIndexPath.item) {
+                        obj.indexPath = [NSIndexPath indexPathForItem:obj.indexPath.item - 1 inSection:obj.indexPath.section];
+                    }
+                } else {
+                    if (toIndexPath.item <= obj.indexPath.item && obj.indexPath.item < fromIndexPath.item) {
+                        obj.indexPath = [NSIndexPath indexPathForItem:obj.indexPath.item + 1 inSection:obj.indexPath.section];
+                    }
+                }
+            }
+        }];
     }
-}
-
-- (void)_moveCachedAttributesFromIndexPath:(NSIndexPath *)fromIndexPath toIndexPath:(NSIndexPath *)toIndexPath __attribute__((objc_direct)) {
-    
 }
 
 - (NSInteger)binSearchWithRect:(CGRect)rect startIndex:(NSInteger)startIndex endIndex:(NSInteger)endIndex __attribute__((objc_direct)) {
