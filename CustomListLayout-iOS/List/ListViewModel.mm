@@ -164,12 +164,7 @@ __attribute__((objc_direct_members))
                 [itemModel release];
             }
             
-//            [snapshot appendItemsWithIdentifiers:newItems intoSectionWithIdentifier:section];
-            if ([snapshot numberOfItemsInSection:section]) {
-                [snapshot insertItemsWithIdentifiers:newItems beforeItemWithIdentifier:[snapshot itemIdentifiersInSectionWithIdentifier:section][0]];
-            } else {
-                [snapshot appendItemsWithIdentifiers:newItems intoSectionWithIdentifier:section];
-            }
+            [snapshot appendItemsWithIdentifiers:newItems intoSectionWithIdentifier:section];
             [newItems release];
         }];
         
