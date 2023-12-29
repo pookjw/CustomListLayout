@@ -84,8 +84,8 @@ __attribute__((objc_direct_members))
     auto deletedIndexPaths = [NSMutableArray<NSIndexPath *> new];
     auto deletedSections = [NSMutableIndexSet new];
     
-    // key: before, value: after
     auto insertedSections = [NSMutableIndexSet new];
+    // key: before, value: after
     auto movedSections = [NSMutableDictionary<NSNumber *, NSNumber *> new];
     
     auto insertedIndexPaths = [NSMutableArray<NSIndexPath *> new];
@@ -143,6 +143,8 @@ __attribute__((objc_direct_members))
     
     //
     
+    auto insertedLayoutAttributes = [NSMutableArray<UICollectionViewLayoutAttributes *> new];
+    
     [insertedSections enumerateIndexesUsingBlock:^(NSUInteger section, BOOL * _Nonnull stop) {
         NSUInteger numberOfItems = [self.collectionView numberOfItemsInSection:section];
         auto layoutAttributesForSection = [[NSMutableArray<UICollectionViewLayoutAttributes *> alloc] initWithCapacity:numberOfItems];
@@ -152,11 +154,13 @@ __attribute__((objc_direct_members))
         
         std::for_each(itemIndexes.cbegin(),
                       itemIndexes.cend(),
-                      [layoutAttributesForSection, section](NSInteger item) {
+                      [layoutAttributesForSection, insertedLayoutAttributes, section](NSInteger item) {
             NSIndexPath *indexPath = [NSIndexPath indexPathForItem:item inSection:section];
             
             UICollectionViewLayoutAttributes *layoutAttributes = [UICollectionViewLayoutAttributes layoutAttributesForCellWithIndexPath:indexPath];
             layoutAttributes.frame = CGRectMake(0.f, 0.f, 0.f, kListCollectionViewLayoutEstimantedHeight);
+            
+            [insertedLayoutAttributes addObject:layoutAttributes];
             [layoutAttributesForSection addObject:layoutAttributes];
         });
         
@@ -198,6 +202,7 @@ __attribute__((objc_direct_members))
                                             0.f,
                                             0.f,
                                             kListCollectionViewLayoutEstimantedHeight);
+        [insertedLayoutAttributes addObject:layoutAttributes];
         
         [_cachedAllAttributes[obj.section] insertObject:layoutAttributes atIndex:obj.item];
     }];
@@ -205,26 +210,31 @@ __attribute__((objc_direct_members))
     
     //
     
-    [movedIndexPaths enumerateObjectsUsingBlock:^(UICollectionViewUpdateItem * _Nonnull updateItem, NSUInteger idx, BOOL * _Nonnull stop) {
-        if (updateItem.indexPathBeforeUpdate.section == updateItem.indexPathAfterUpdate.section) {
-            auto cachedAttibutesForSection = _cachedAllAttributes[updateItem.indexPathAfterUpdate.section];
-            auto cachedAttibutesForItem = [cachedAttibutesForSection[updateItem.indexPathBeforeUpdate.item] retain];
-            
-            [cachedAttibutesForSection removeObjectAtIndex:updateItem.indexPathBeforeUpdate.item];
-            [cachedAttibutesForSection insertObject:cachedAttibutesForItem atIndex:updateItem.indexPathAfterUpdate.item];
-            [cachedAttibutesForItem release];
-        } else {
-            auto cachedAttibutesForBeforeSection = _cachedAllAttributes[updateItem.indexPathBeforeUpdate.section];
-            auto cachedAttibutesForAfterSection = _cachedAllAttributes[updateItem.indexPathAfterUpdate.section];
-            
-            auto cachedAttibutesForItem = [cachedAttibutesForBeforeSection[updateItem.indexPathBeforeUpdate.item] retain];
-            
-            [cachedAttibutesForBeforeSection removeObjectAtIndex:updateItem.indexPathBeforeUpdate.item];
-            [cachedAttibutesForAfterSection insertObject:cachedAttibutesForItem atIndex:updateItem.indexPathAfterUpdate.item];
-            [cachedAttibutesForItem release];
-        }
+    [movedIndexPaths sortUsingComparator:^NSComparisonResult(UICollectionViewUpdateItem * _Nonnull obj1, UICollectionViewUpdateItem * _Nonnull obj2) {
+        return [obj1.indexPathAfterUpdate compare:obj2.indexPathAfterUpdate];
     }];
     
+    auto ff = [NSMutableArray<UICollectionViewLayoutAttributes *> new];
+    [movedIndexPaths enumerateObjectsUsingBlock:^(UICollectionViewUpdateItem * _Nonnull obj_1, NSUInteger idx_1, BOOL * _Nonnull stop_1) {
+        [_cachedAllAttributes enumerateObjectsUsingBlock:^(NSMutableArray<UICollectionViewLayoutAttributes *> * _Nonnull obj_2, NSUInteger idx_2, BOOL * _Nonnull stop_2) {
+            [obj_2 enumerateObjectsUsingBlock:^(UICollectionViewLayoutAttributes * _Nonnull obj_3, NSUInteger idx_3, BOOL * _Nonnull stop_3) {
+                if (![insertedLayoutAttributes containsObject:obj_3] && [obj_3.indexPath isEqual:obj_1.indexPathBeforeUpdate]) {
+                    [ff addObject:obj_3];
+                    [obj_2 removeObjectAtIndex:idx_3];
+                    *stop_2 = YES;
+                    *stop_3 = YES;
+                }
+            }];
+        }];
+    }];
+    
+    [movedIndexPaths enumerateObjectsUsingBlock:^(UICollectionViewUpdateItem * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        NSIndexPath *indexPath = obj.indexPathAfterUpdate;
+        [_cachedAllAttributes[indexPath.section] insertObject:ff[idx] atIndex:indexPath.item];
+    }];
+    
+    [insertedLayoutAttributes release];
+    [ff release];
     [movedIndexPaths release];
     
     //
@@ -272,6 +282,8 @@ __attribute__((objc_direct_members))
     //
     
     [self updateGeometry];
+    
+    NSLog(@"%@", self.allCachedAllAttributes);
     
     //
     
