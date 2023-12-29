@@ -90,29 +90,29 @@ __attribute__((objc_direct_members))
                 [snapshot moveSectionWithIdentifier:section afterSectionWithIdentifier:randomSection];
             }
             
-            auto itemIdentifiers = [snapshot itemIdentifiersInSectionWithIdentifier:section];
-            NSUInteger numberOfItems = itemIdentifiers.count;
-            
-            if (numberOfItems == 0) {
-                return;
-            }
-            
-            __block std::uniform_int_distribution<NSUInteger> numberOfItems_dist(0, numberOfItems - 1);
-            [itemIdentifiers enumerateObjectsUsingBlock:^(ListItemModel * _Nonnull item, NSUInteger idx, BOOL * _Nonnull stop) {
-                auto items = [snapshot itemIdentifiersInSectionWithIdentifier:section];
-                
-                BOOL itemBefore = bool_dist(gen);
-                BOOL randomItemIndex = numberOfItems_dist(gen);
-                while ([item isEqual:items[randomItemIndex]]) randomItemIndex = numberOfItems_dist(gen);
-                
-                ListItemModel *randomItem = [snapshot itemIdentifiersInSectionWithIdentifier:section][randomItemIndex];
-                
-                if (itemBefore) {
-                    [snapshot moveItemWithIdentifier:item beforeItemWithIdentifier:randomItem];
-                } else {
-                    [snapshot moveItemWithIdentifier:item afterItemWithIdentifier:randomItem];
-                }
-            }];
+//            auto itemIdentifiers = [snapshot itemIdentifiersInSectionWithIdentifier:section];
+//            NSUInteger numberOfItems = itemIdentifiers.count;
+//            
+//            if (numberOfItems == 0) {
+//                return;
+//            }
+//            
+//            __block std::uniform_int_distribution<NSUInteger> numberOfItems_dist(0, numberOfItems - 1);
+//            [itemIdentifiers enumerateObjectsUsingBlock:^(ListItemModel * _Nonnull item, NSUInteger idx, BOOL * _Nonnull stop) {
+//                auto items = [snapshot itemIdentifiersInSectionWithIdentifier:section];
+//                
+//                BOOL itemBefore = bool_dist(gen);
+//                BOOL randomItemIndex = numberOfItems_dist(gen);
+//                while ([item isEqual:items[randomItemIndex]]) randomItemIndex = numberOfItems_dist(gen);
+//                
+//                ListItemModel *randomItem = [snapshot itemIdentifiersInSectionWithIdentifier:section][randomItemIndex];
+//                
+//                if (itemBefore) {
+//                    [snapshot moveItemWithIdentifier:item beforeItemWithIdentifier:randomItem];
+//                } else {
+//                    [snapshot moveItemWithIdentifier:item afterItemWithIdentifier:randomItem];
+//                }
+//            }];
         }];
         
         [dataSource applySnapshot:snapshot animatingDifferences:YES completion:completionHandler];

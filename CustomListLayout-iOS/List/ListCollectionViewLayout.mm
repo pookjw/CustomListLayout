@@ -85,32 +85,53 @@ __attribute__((objc_direct_members))
     auto deletedSections = [NSMutableIndexSet new];
     
     auto insertedSections = [NSMutableIndexSet new];
+    auto insertedIndexPaths = [NSMutableArray<NSIndexPath *> new];
+    
     // key: before, value: after
     auto movedSections = [NSMutableDictionary<NSNumber *, NSNumber *> new];
-    
-    auto insertedIndexPaths = [NSMutableArray<NSIndexPath *> new];
     auto movedIndexPaths = [NSMutableArray<UICollectionViewUpdateItem *> new];
     
+    auto reloadedSections = [NSMutableIndexSet new];
     auto reloadedIndexPaths = [NSMutableArray<NSIndexPath *> new];
     
     [updateItems enumerateObjectsUsingBlock:^(UICollectionViewUpdateItem * _Nonnull updateItem, NSUInteger idx, BOOL * _Nonnull stop) {
         switch (updateItem.updateAction) {
             case UICollectionUpdateActionInsert:
                 if (updateItem.indexPathAfterUpdate.item == NSNotFound) {
-                    [insertedSections addIndex:updateItem.indexPathAfterUpdate.section];
+                    if ([deletedSections containsIndex:updateItem.indexPathAfterUpdate.section]) {
+                        [deletedSections removeIndex:updateItem.indexPathAfterUpdate.section];
+                    } else {
+                        [insertedSections addIndex:updateItem.indexPathAfterUpdate.section];
+                    }
                 } else {
-                    [insertedIndexPaths addObject:updateItem.indexPathAfterUpdate];
+                    if ([deletedIndexPaths containsObject:updateItem.indexPathAfterUpdate]) {
+                        [deletedIndexPaths removeObject:updateItem.indexPathAfterUpdate];
+                    } else {
+                        [insertedIndexPaths addObject:updateItem.indexPathAfterUpdate];
+                    }
                 }
                 break;
             case UICollectionUpdateActionDelete:
                 if (updateItem.indexPathBeforeUpdate.item == NSNotFound) {
-                    [deletedSections addIndex:updateItem.indexPathBeforeUpdate.section];
+                    if ([insertedSections containsIndex:updateItem.indexPathBeforeUpdate.section]) {
+                        [insertedSections removeIndex:updateItem.indexPathBeforeUpdate.section];
+                    } else {
+                        [deletedSections addIndex:updateItem.indexPathBeforeUpdate.section];
+                    }
                 } else {
-                    [deletedIndexPaths addObject:updateItem.indexPathBeforeUpdate];
+                    if ([insertedIndexPaths containsObject:updateItem.indexPathBeforeUpdate]) {
+                        [insertedIndexPaths removeObject:updateItem.indexPathBeforeUpdate];
+                    } else {
+                        [deletedIndexPaths addObject:updateItem.indexPathBeforeUpdate];
+                    }
                 }
                 break;
             case UICollectionUpdateActionReload:
-                [reloadedIndexPaths addObject:updateItem.indexPathBeforeUpdate];
+                if (updateItem.indexPathBeforeUpdate.item == NSNotFound) {
+                    [reloadedSections addIndex:updateItem.indexPathBeforeUpdate.section];
+                } else {
+                    [reloadedIndexPaths addObject:updateItem.indexPathBeforeUpdate];
+                }
                 break;
             case UICollectionUpdateActionMove:
                 if (updateItem.indexPathBeforeUpdate.item == NSNotFound) {
@@ -124,27 +145,68 @@ __attribute__((objc_direct_members))
         }
     }];
     
+    auto insertedLayoutAttributes = [NSMutableArray<UICollectionViewLayoutAttributes *> new];
+    
+    
+    [self deleteIndexPaths:deletedIndexPaths];
+    [deletedIndexPaths release];
+    
+    [self deleteSections:deletedSections];
+    [deletedSections release];
+    
+    [self insertIndexPaths:insertedIndexPaths insertedLayoutAttributes:insertedLayoutAttributes];
+    [insertedIndexPaths release];
+    
+    [self insertSections:insertedSections insertedLayoutAttributes:insertedLayoutAttributes];
+    [insertedSections release];
+    
+    [self moveSections:movedSections];
+    [movedSections release];
+    
+    [self moveIndexPaths:movedIndexPaths insertedLayoutAttributes:insertedLayoutAttributes];
+    [movedIndexPaths release];
+    [insertedLayoutAttributes release];
+    
+    [self reloadSections:reloadedSections];
+    [reloadedSections release];
+    
+    [self reloadIndexPaths:reloadedIndexPaths];
+    [reloadedIndexPaths release];
+    
     //
     
+    [_cachedAllAttributes enumerateObjectsUsingBlock:^(NSMutableArray<UICollectionViewLayoutAttributes *> * _Nonnull obj_1, NSUInteger idx_1, BOOL * _Nonnull stop) {
+        [obj_1 enumerateObjectsUsingBlock:^(UICollectionViewLayoutAttributes * _Nonnull obj_2, NSUInteger idx_2, BOOL * _Nonnull stop) {
+            obj_2.indexPath = [NSIndexPath indexPathForItem:idx_2 inSection:idx_1];
+        }];
+    }];
+    
+    //
+    
+    [self updateGeometry];
+    
+    //
+    
+    NSLog(@"%@", self.allCachedAllAttributes);
+    
+    [super prepareForCollectionViewUpdates:updateItems];
+}
+
+- (void)deleteSections:(NSMutableIndexSet *)deletedSections __attribute__((objc_direct)) {
+    [_cachedAllAttributes removeObjectsAtIndexes:deletedSections];
+}
+
+- (void)deleteIndexPaths:(NSMutableArray<NSIndexPath *> *)deletedIndexPaths __attribute__((objc_direct)) {
     [deletedIndexPaths sortUsingComparator:^NSComparisonResult(NSIndexPath  * _Nonnull obj1, NSIndexPath * _Nonnull obj2) {
-        return static_cast<NSComparisonResult>([obj1 compare:obj2] * -1);
+        return [obj2 compare:obj1]; // reversed
     }];
     
     [deletedIndexPaths enumerateObjectsUsingBlock:^(NSIndexPath * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
         [_cachedAllAttributes[obj.section] removeObjectAtIndex:obj.item];
     }];
-    
-    [deletedIndexPaths release];
-    
-    //
-    
-    [_cachedAllAttributes removeObjectsAtIndexes:deletedSections];
-    [deletedSections release];
-    
-    //
-    
-    auto insertedLayoutAttributes = [NSMutableArray<UICollectionViewLayoutAttributes *> new];
-    
+}
+
+- (void)insertSections:(NSMutableIndexSet *)insertedSections insertedLayoutAttributes:(NSMutableArray<UICollectionViewLayoutAttributes *> *)insertedLayoutAttributes __attribute__((objc_direct)) {
     [insertedSections enumerateIndexesUsingBlock:^(NSUInteger section, BOOL * _Nonnull stop) {
         NSUInteger numberOfItems = [self.collectionView numberOfItemsInSection:section];
         auto layoutAttributesForSection = [[NSMutableArray<UICollectionViewLayoutAttributes *> alloc] initWithCapacity:numberOfItems];
@@ -167,32 +229,9 @@ __attribute__((objc_direct_members))
         [_cachedAllAttributes insertObject:layoutAttributesForSection atIndex:section];
         [layoutAttributesForSection release];
     }];
-    
-    //
-    
-    // key: after index, value: cahced attributes for section
-    auto removedCachedAttibutesForMove = [NSMutableDictionary<NSNumber *, NSMutableArray<UICollectionViewLayoutAttributes *> *> new];
-    auto movedSections_before = [NSMutableIndexSet new];
-    [movedSections.allKeys enumerateObjectsUsingBlock:^(NSNumber * _Nonnull before, NSUInteger idx, BOOL * _Nonnull stop) {
-        NSNumber *after = movedSections[before];
-        removedCachedAttibutesForMove[after] = _cachedAllAttributes[before.integerValue];
-        [movedSections_before addIndex:before.integerValue];
-    }];
-    [movedSections release];
-    
-    [_cachedAllAttributes removeObjectsAtIndexes:movedSections_before];
-    [movedSections_before release];
-    
-    auto sorted_removedCachedAttibutesForMoveKeys = [removedCachedAttibutesForMove.allKeys sortedArrayUsingComparator:^NSComparisonResult(NSNumber * _Nonnull obj1, NSNumber * _Nonnull obj2) {
-        return [obj1 compare:obj2];
-    }];
-    [sorted_removedCachedAttibutesForMoveKeys enumerateObjectsUsingBlock:^(NSNumber * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        [_cachedAllAttributes insertObject:removedCachedAttibutesForMove[obj] atIndex:obj.integerValue];
-    }];
-    [removedCachedAttibutesForMove release];
-    
-    //
-    
+}
+
+- (void)insertIndexPaths:(NSMutableArray<NSIndexPath *> *)insertedIndexPaths insertedLayoutAttributes:(NSMutableArray<UICollectionViewLayoutAttributes *> *)insertedLayoutAttributes __attribute__((objc_direct)) {
     [insertedIndexPaths sortUsingComparator:^NSComparisonResult(NSIndexPath * _Nonnull obj1, NSIndexPath * _Nonnull obj2) {
         return [obj1 compare:obj2];
     }];
@@ -206,20 +245,38 @@ __attribute__((objc_direct_members))
         
         [_cachedAllAttributes[obj.section] insertObject:layoutAttributes atIndex:obj.item];
     }];
-    [insertedIndexPaths release];
-    
-    //
-    
-    [movedIndexPaths sortUsingComparator:^NSComparisonResult(UICollectionViewUpdateItem * _Nonnull obj1, UICollectionViewUpdateItem * _Nonnull obj2) {
-        return [obj1.indexPathAfterUpdate compare:obj2.indexPathAfterUpdate];
+}
+
+- (void)moveSections:(NSMutableDictionary<NSNumber *, NSNumber *> *)movedSections __attribute__((objc_direct)) {
+    // key: after index, value: cahced attributes for section
+    auto removedCachedAttibutesForMove = [NSMutableDictionary<NSNumber *, NSMutableArray<UICollectionViewLayoutAttributes *> *> new];
+    auto movedSections_before = [NSMutableIndexSet new];
+    [movedSections.allKeys enumerateObjectsUsingBlock:^(NSNumber * _Nonnull before, NSUInteger idx, BOOL * _Nonnull stop) {
+        NSNumber *after = movedSections[before];
+        removedCachedAttibutesForMove[after] = _cachedAllAttributes[before.integerValue];
+        [movedSections_before addIndex:before.integerValue];
     }];
     
-    auto ff = [NSMutableArray<UICollectionViewLayoutAttributes *> new];
+    [_cachedAllAttributes removeObjectsAtIndexes:movedSections_before];
+    [movedSections_before release];
+    
+    auto sorted_removedCachedAttibutesForMoveKeys = [removedCachedAttibutesForMove.allKeys sortedArrayUsingComparator:^NSComparisonResult(NSNumber * _Nonnull obj1, NSNumber * _Nonnull obj2) {
+        return [obj1 compare:obj2];
+    }];
+    [sorted_removedCachedAttibutesForMoveKeys enumerateObjectsUsingBlock:^(NSNumber * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        [_cachedAllAttributes insertObject:removedCachedAttibutesForMove[obj] atIndex:obj.integerValue];
+    }];
+    [removedCachedAttibutesForMove release];
+}
+
+- (void)moveIndexPaths:(NSMutableArray<UICollectionViewUpdateItem *> *)movedIndexPaths insertedLayoutAttributes:(NSMutableArray<UICollectionViewLayoutAttributes *> *)insertedLayoutAttributes __attribute__((objc_direct)) {
+    auto removedAttributesForMove = [NSMutableDictionary<NSIndexPath *, UICollectionViewLayoutAttributes *> new];
+    
     [movedIndexPaths enumerateObjectsUsingBlock:^(UICollectionViewUpdateItem * _Nonnull obj_1, NSUInteger idx_1, BOOL * _Nonnull stop_1) {
         [_cachedAllAttributes enumerateObjectsUsingBlock:^(NSMutableArray<UICollectionViewLayoutAttributes *> * _Nonnull obj_2, NSUInteger idx_2, BOOL * _Nonnull stop_2) {
             [obj_2 enumerateObjectsUsingBlock:^(UICollectionViewLayoutAttributes * _Nonnull obj_3, NSUInteger idx_3, BOOL * _Nonnull stop_3) {
                 if (![insertedLayoutAttributes containsObject:obj_3] && [obj_3.indexPath isEqual:obj_1.indexPathBeforeUpdate]) {
-                    [ff addObject:obj_3];
+                    removedAttributesForMove[obj_1.indexPathAfterUpdate] = obj_3;
                     [obj_2 removeObjectAtIndex:idx_3];
                     *stop_2 = YES;
                     *stop_3 = YES;
@@ -228,66 +285,48 @@ __attribute__((objc_direct_members))
         }];
     }];
     
-    [movedIndexPaths enumerateObjectsUsingBlock:^(UICollectionViewUpdateItem * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        NSIndexPath *indexPath = obj.indexPathAfterUpdate;
-        [_cachedAllAttributes[indexPath.section] insertObject:ff[idx] atIndex:indexPath.item];
+    auto removedAttributesForMove_sortedKeys = [removedAttributesForMove.allKeys sortedArrayUsingComparator:^NSComparisonResult(NSIndexPath * _Nonnull obj1, NSIndexPath * _Nonnull obj2) {
+        return [obj1 compare:obj2];
     }];
     
-    [insertedLayoutAttributes release];
-    [ff release];
-    [movedIndexPaths release];
+    [removedAttributesForMove_sortedKeys enumerateObjectsUsingBlock:^(NSIndexPath * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        [_cachedAllAttributes[obj.section] insertObject:removedAttributesForMove[obj] atIndex:obj.item];
+    }];
     
-    //
-    
-    [reloadedIndexPaths enumerateObjectsUsingBlock:^(NSIndexPath * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
-        if (obj.item == NSNotFound) {
-            NSInteger section = obj.section;
+    [removedAttributesForMove release];
+}
+
+- (void)reloadSections:(NSMutableIndexSet *)reloadedSections __attribute__((objc_direct)) {
+    [reloadedSections enumerateIndexesUsingBlock:^(NSUInteger section, BOOL * _Nonnull stop) {
+        auto cachedAttributesForSection = [NSMutableArray<UICollectionViewLayoutAttributes *> new];
+        _cachedAllAttributes[section] = cachedAttributesForSection;
+        
+        NSUInteger numberOfItems = [self.collectionView numberOfItemsInSection:section];
+        
+        std::vector<NSInteger> itemIndexes(numberOfItems);
+        std::iota(itemIndexes.begin(), itemIndexes.end(), 0);
+        
+        std::for_each(itemIndexes.cbegin(),
+                      itemIndexes.cend(),
+                      [cachedAttributesForSection, section](NSInteger item) {
+            NSIndexPath *indexPath = [NSIndexPath indexPathForItem:item inSection:section];
             
-            auto cachedAttributesForSection = [NSMutableArray<UICollectionViewLayoutAttributes *> new];
-            _cachedAllAttributes[section] = cachedAttributesForSection;
-            
-            NSUInteger numberOfItems = [self.collectionView numberOfItemsInSection:section];
-            
-            std::vector<NSInteger> itemIndexes(numberOfItems);
-            std::iota(itemIndexes.begin(), itemIndexes.end(), 0);
-            
-            std::for_each(itemIndexes.cbegin(),
-                          itemIndexes.cend(),
-                          [cachedAttributesForSection, section](NSInteger item) {
-                NSIndexPath *indexPath = [NSIndexPath indexPathForItem:item inSection:section];
-                
-                UICollectionViewLayoutAttributes *layoutAttributes = [UICollectionViewLayoutAttributes layoutAttributesForCellWithIndexPath:indexPath];
-                layoutAttributes.frame = CGRectMake(0.f, 0.f, 0.f, kListCollectionViewLayoutEstimantedHeight);
-                [cachedAttributesForSection addObject:layoutAttributes];
-            });
-            
-            [cachedAttributesForSection release];
-        } else {
-            UICollectionViewLayoutAttributes *layoutAttributes = [UICollectionViewLayoutAttributes layoutAttributesForCellWithIndexPath:obj];
+            UICollectionViewLayoutAttributes *layoutAttributes = [UICollectionViewLayoutAttributes layoutAttributesForCellWithIndexPath:indexPath];
             layoutAttributes.frame = CGRectMake(0.f, 0.f, 0.f, kListCollectionViewLayoutEstimantedHeight);
-            
-            _cachedAllAttributes[obj.section][obj.item] = layoutAttributes;
-        }
+            [cachedAttributesForSection addObject:layoutAttributes];
+        });
+        
+        [cachedAttributesForSection release];
     }];
-    
-    //
-    
-    [_cachedAllAttributes enumerateObjectsUsingBlock:^(NSMutableArray<UICollectionViewLayoutAttributes *> * _Nonnull obj_1, NSUInteger idx_1, BOOL * _Nonnull stop) {
-        [obj_1 enumerateObjectsUsingBlock:^(UICollectionViewLayoutAttributes * _Nonnull obj_2, NSUInteger idx_2, BOOL * _Nonnull stop) {
-            obj_2.indexPath = [NSIndexPath indexPathForItem:idx_2 inSection:idx_1];
-            
-        }];
+}
+
+- (void)reloadIndexPaths:(NSMutableArray<NSIndexPath *> *)reloadedIndexPaths __attribute__((objc_direct)) {
+    [reloadedIndexPaths enumerateObjectsUsingBlock:^(NSIndexPath * _Nonnull obj, NSUInteger idx, BOOL * _Nonnull stop) {
+        UICollectionViewLayoutAttributes *layoutAttributes = [UICollectionViewLayoutAttributes layoutAttributesForCellWithIndexPath:obj];
+        layoutAttributes.frame = CGRectMake(0.f, 0.f, 0.f, kListCollectionViewLayoutEstimantedHeight);
+        
+        _cachedAllAttributes[obj.section][obj.item] = layoutAttributes;
     }];
-    
-    //
-    
-    [self updateGeometry];
-    
-    NSLog(@"%@", self.allCachedAllAttributes);
-    
-    //
-    
-    [super prepareForCollectionViewUpdates:updateItems];
 }
 
 - (void)updateGeometry __attribute__((objc_direct)) {
